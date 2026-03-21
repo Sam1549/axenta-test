@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE USER replicator WITH REPLICATION ENCRYPTED PASSWORD '$REPLICATION_PASSWORD';
+    -- Изменили TEXT на JSONB
+    CREATE TABLE IF NOT EXISTS events (id SERIAL PRIMARY KEY, data JSONB, created_at TIMESTAMP);
+EOSQL
