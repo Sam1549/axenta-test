@@ -14,7 +14,7 @@ const pool = new Pool({
 
 app.post('/event', async (req, res) => {
   try {
-    const { data } = req.body;
+    const  data  = req.body;
     await pool.query('INSERT INTO events (data, created_at) VALUES ($1, NOW())', [data]);
     res.status(201).json({ status: 'ok', message: 'Event saved' });
   } catch (err) {

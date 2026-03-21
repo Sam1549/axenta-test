@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # HTTP-сервис NodeJS Express
+  app:
+    image: axenta-app
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    networks:
+      - app-net
+    ports:
+      - "3000:3000"
+    environment:
+      - POSTGRES_HOST=db-primary
+      - POSTGRES_DB=eventsdb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret_password
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - db-primary
+
+  # Primary database
+  db-primary:
+    image: axenta-db-primary
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+    networks:
+      - app-net
+    volumes:
+      - pg-primary-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=eventsdb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret_password  
+      - REPLICATION_PASSWORD=replication_secret
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Replica database
+  db-replica:
+    image: axenta-db-replica
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    networks:
+      - app-net
+    volumes:
+      - pg-replica-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - PRIMARY_HOST=db-primary
+      - POSTGRES_PASSWORD=secret_password
+      - REPLICATION_PASSWORD=replication_secret
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      - db-primary
+
+# Сеть (Overlay)
+networks:
+  app-net:
+    driver: overlay
+    attachable: true
+
+volumes:
+  pg-primary-data:
+  pg-replica-data:
+
