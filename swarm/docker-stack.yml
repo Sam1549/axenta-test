@@ -23,6 +23,10 @@ services:
       - POSTGRES_DB=eventsdb
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=secret_password
+      - CLICKHOUSE_HOST=http://clickhouse:8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=clickhouse_secret
+      - CLICKHOUSE_DB=default
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
       interval: 30s
@@ -86,6 +90,35 @@ services:
       start_period: 30s
     depends_on:
       - db-primary
+  
+  clickhouse:
+    image: axenta-clickhouse
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+    networks:
+      - app-net
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    ports:
+      - "8123:8123"
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=clickhouse_secret
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - CLICKHOUSE_DB=default 
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 # Сеть (Overlay)
 networks:
@@ -96,4 +129,5 @@ networks:
 volumes:
   pg-primary-data:
   pg-replica-data:
+  clickhouse-data:
 

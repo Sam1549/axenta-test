@@ -10,6 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@clickhouse/client": "^1.18.2",
+    "date-fns": "^4.1.0",
     "express": "^5.2.1",
     "pg": "^8.20.0"
   }
